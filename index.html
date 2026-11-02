@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>任务管理看板</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#ffffff; --line:#e5e9f2; --text:#1f2937; --muted:#6b7280;
+    --primary:#5b7cfa; --work:#5b7cfa; --study:#22c55e; --life:#f59e0b; --shadow:0 2px 8px rgba(17,24,39,.06);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+       background:var(--bg);color:var(--text);}
+  header{padding:22px 28px 10px;}
+  h1{margin:0;font-size:22px;font-weight:600;}
+  .sub{margin-top:6px;color:var(--muted);font-size:13px;}
+  .toolbar{display:flex;gap:10px;align-items:center;padding:12px 28px 4px;flex-wrap:wrap;}
+  .btn{border:none;border-radius:10px;padding:9px 16px;font-size:14px;cursor:pointer;
+       background:var(--primary);color:#fff;box-shadow:var(--shadow);transition:.15s;}
+  .btn:hover{filter:brightness(1.05);}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 14px;
+        font-size:13px;cursor:pointer;color:var(--muted);transition:.15s;}
+  .chip.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .board{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding:16px 28px 40px;}
+  @media(max-width:900px){.board{grid-template-columns:1fr;}}
+  .col{background:#eef1f7;border-radius:14px;padding:12px;min-height:320px;display:flex;flex-direction:column;gap:10px;}
+  .col-head{display:flex;justify-content:space-between;align-items:center;padding:2px 4px 6px;}
+  .col-title{font-size:14px;font-weight:600;}
+  .col-count{font-size:12px;color:var(--muted);background:#fff;border-radius:999px;padding:1px 9px;}
+  .col.dragover{outline:2px dashed var(--primary);outline-offset:-4px;}
+  .card{background:var(--card);border-radius:12px;padding:12px 13px;box-shadow:var(--shadow);
+        cursor:grab;border-left:4px solid var(--work);transition:.15s;}
+  .card:active{cursor:grabbing;}
+  .card.dragging{opacity:.45;}
+  .card[data-cat="学习"]{border-left-color:var(--study);}
+  .card[data-cat="生活"]{border-left-color:var(--life);}
+  .card h3{margin:0 0 6px;font-size:14px;font-weight:600;word-break:break-word;}
+  .card p{margin:0 0 9px;font-size:13px;color:var(--muted);line-height:1.45;word-break:break-word;}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;}
+  .tag{font-size:11px;padding:2px 9px;border-radius:999px;background:#eef2ff;color:var(--work);}
+  .card[data-cat="学习"] .tag{background:#ecfdf5;color:var(--study);}
+  .card[data-cat="生活"] .tag{background:#fffbeb;color:var(--life);}
+  .del{border:none;background:none;color:#cbd5e1;cursor:pointer;font-size:15px;line-height:1;}
+  .del:hover{color:#ef4444;}
+  .empty{color:#b0b8c7;font-size:13px;text-align:center;padding:22px 0;}
+  .modal-mask{position:fixed;inset:0;background:rgba(17,24,39,.35);display:none;
+              align-items:center;justify-content:center;z-index:20;}
+  .modal-mask.show{display:flex;}
+  .modal{background:#fff;border-radius:16px;padding:22px;width:min(420px,92vw);box-shadow:0 12px 40px rgba(17,24,39,.18);}
+  .modal h2{margin:0 0 16px;font-size:17px;}
+  .field{margin-bottom:13px;}
+  .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px;}
+  .field input,.field textarea{width:100%;border:1px solid var(--line);border-radius:9px;
+        padding:9px 11px;font-size:14px;font-family:inherit;outline:none;}
+  .field input:focus,.field textarea:focus{border-color:var(--primary);}
+  .field textarea{resize:vertical;min-height:64px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px;}
+  .ghost{background:#fff;color:var(--muted);border:1px solid var(--line);}
+</style>
+</head>
+<body>
+<header>
+  <h1>任务管理看板</h1>
+  <div class="sub">新建任务卡片 · 拖拽切换状态 · 按分类筛选 · 数据自动保存</div>
+</header>
+
+<div class="toolbar">
+  <button class="btn" id="addBtn">+ 新建任务</button>
+  <span style="width:8px"></span>
+  <button class="chip active" data-filter="全部">全部</button>
+  <button class="chip" data-filter="工作">工作</button>
+  <button class="chip" data-filter="学习">学习</button>
+  <button class="chip" data-filter="生活">生活</button>
+</div>
+
+<div class="board" id="board"></div>
+
+<div class="modal-mask" id="mask">
+  <div class="modal">
+    <h2>新建任务</h2>
+    <div class="field">
+      <label>标题</label>
+      <input id="fTitle" placeholder="例如：完成实验报告" />
+    </div>
+    <div class="field">
+      <label>描述</label>
+      <textarea id="fDesc" placeholder="补充说明（可选）"></textarea>
+    </div>
+    <div class="field">
+      <label>分类</label>
+      <div class="toolbar" style="padding:0;gap:8px">
+        <button class="chip cat active" data-cat="工作">工作</button>
+        <button class="chip cat" data-cat="学习">学习</button>
+        <button class="chip cat" data-cat="生活">生活</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="cancelBtn">取消</button>
+      <button class="btn" id="saveBtn">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const STORAGE_KEY = 'ict-task-board-v1';
+  const COLUMNS = [
+    { key: 'todo',  title: '待办' },
+    { key: 'doing', title: '进行中' },
+    { key: 'done',  title: '已完成' },
+  ];
+
+  let tasks = load();
+  let filter = '全部';
+  let newCat = '工作';
+  let dragId = null;
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const arr = raw ? JSON.parse(raw) : null;
+      return Array.isArray(arr) ? arr : seed();
+    } catch (e) { return seed(); }
+  }
+  function seed() {
+    return [
+      { id: 1, title: '熟悉拖拽看板', desc: '把这张卡片拖到「进行中」试试', cat: '工作', status: 'todo' },
+      { id: 2, title: '阅读实验手册', desc: '了解任务看板的完整需求', cat: '学习', status: 'doing' },
+      { id: 3, title: '准备演示环境', desc: '启动本地服务并截图', cat: '生活', status: 'done' },
+    ];
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); } catch (e) {}
+  }
+
+  function render() {
+    const board = document.getElementById('board');
+    board.innerHTML = '';
+    COLUMNS.forEach(function (col) {
+      const list = tasks.filter(function (t) {
+        return t.status === col.key && (filter === '全部' || t.cat === filter);
+      });
+      const el = document.createElement('div');
+      el.className = 'col';
+      el.dataset.status = col.key;
+
+      const head = document.createElement('div');
+      head.className = 'col-head';
+      head.innerHTML = '<span class="col-title">' + col.title +
+        '</span><span class="col-count">' + list.length + '</span>';
+      el.appendChild(head);
+
+      if (!list.length) {
+        const empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = '暂无任务';
+        el.appendChild(empty);
+      }
+
+      list.forEach(function (t) { el.appendChild(cardEl(t)); });
+      bindDrop(el);
+      board.appendChild(el);
+    });
+  }
+
+  function cardEl(t) {
+    const c = document.createElement('div');
+    c.className = 'card';
+    c.draggable = true;
+    c.dataset.id = t.id;
+    c.dataset.cat = t.cat;
+    c.innerHTML =
+      '<h3></h3><p></p>' +
+      '<div class="card-foot"><span class="tag"></span>' +
+      '<button class="del" title="删除">×</button></div>';
+    c.querySelector('h3').textContent = t.title;
+    const p = c.querySelector('p');
+    if (t.desc) p.textContent = t.desc; else p.remove();
+    c.querySelector('.tag').textContent = t.cat;
+    c.querySelector('.del').addEventListener('click', function (e) {
+      e.stopPropagation();
+      tasks = tasks.filter(function (x) { return x.id !== t.id; });
+      save(); render();
+    });
+    c.addEventListener('dragstart', function (e) {
+      dragId = t.id;
+      c.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', String(t.id)); } catch (err) {}
+    });
+    c.addEventListener('dragend', function () {
+      c.classList.remove('dragging');
+      dragId = null;
+    });
+    return c;
+  }
+
+  function bindDrop(colEl) {
+    colEl.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      colEl.classList.add('dragover');
+    });
+    colEl.addEventListener('dragleave', function () {
+      colEl.classList.remove('dragover');
+    });
+    colEl.addEventListener('drop', function (e) {
+      e.preventDefault();
+      colEl.classList.remove('dragover');
+      const id = dragId != null ? dragId : Number(e.dataTransfer.getData('text/plain'));
+      const status = colEl.dataset.status;
+      const t = tasks.find(function (x) { return x.id === id; });
+      if (t && t.status !== status) { t.status = status; save(); render(); }
+    });
+  }
+
+  // 新建任务
+  const mask = document.getElementById('mask');
+  document.getElementById('addBtn').addEventListener('click', function () {
+    document.getElementById('fTitle').value = '';
+    document.getElementById('fDesc').value = '';
+    setCat('工作');
+    mask.classList.add('show');
+    document.getElementById('fTitle').focus();
+  });
+  document.getElementById('cancelBtn').addEventListener('click', function () {
+    mask.classList.remove('show');
+  });
+  mask.addEventListener('click', function (e) {
+    if (e.target === mask) mask.classList.remove('show');
+  });
+  function setCat(cat) {
+    newCat = cat;
+    document.querySelectorAll('.chip.cat').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.cat === cat);
+    });
+  }
+  document.querySelectorAll('.chip.cat').forEach(function (b) {
+    b.addEventListener('click', function () { setCat(b.dataset.cat); });
+  });
+  document.getElementById('saveBtn').addEventListener('click', function () {
+    const title = document.getElementById('fTitle').value.trim();
+    if (!title) { document.getElementById('fTitle').focus(); return; }
+    const desc = document.getElementById('fDesc').value.trim();
+    const maxId = tasks.reduce(function (m, t) { return Math.max(m, t.id); }, 0);
+    tasks.push({ id: maxId + 1, title: title, desc: desc, cat: newCat, status: 'todo' });
+    save(); render();
+    mask.classList.remove('show');
+  });
+
+  // 分类筛选
+  document.querySelectorAll('.chip[data-filter]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      filter = b.dataset.filter;
+      document.querySelectorAll('.chip[data-filter]').forEach(function (x) {
+        x.classList.toggle('active', x === b);
+      });
+      render();
+    });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
