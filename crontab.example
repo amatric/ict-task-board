@@ -1,0 +1,6 @@
+# 每 6 小时抓一次；日志由 run_cron.sh 自行落盘
+0 */6 * * * /path/to/gh-trend-scheduler/run_cron.sh
+
+# 每天 09:00 抓一次并推送到指定地址（示例）
+0 9 * * * /path/to/gh-trend-scheduler/run_cron.sh && curl -s -X POST -H 'Content-Type: application/json' \
+  --data @/path/to/gh-trend-scheduler/output/latest.json https://example.com/hook/gh-trend

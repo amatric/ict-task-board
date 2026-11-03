@@ -1,0 +1,390 @@
+{
+  "generated_at": "2026-11-03T11:11:46+08:00",
+  "window_days": 7,
+  "total": 30,
+  "total_stars": 64164,
+  "languages": [
+    [
+      "JavaScript",
+      9
+    ],
+    [
+      "Python",
+      7
+    ],
+    [
+      "TypeScript",
+      3
+    ],
+    [
+      "Kotlin",
+      2
+    ],
+    [
+      "HTML",
+      2
+    ],
+    [
+      "Rust",
+      1
+    ],
+    [
+      "C",
+      1
+    ],
+    [
+      "C++",
+      1
+    ],
+    [
+      "Go",
+      1
+    ],
+    [
+      "PowerShell",
+      1
+    ],
+    [
+      "Lua",
+      1
+    ],
+    [
+      "Swift",
+      1
+    ]
+  ],
+  "stars_by_language": [
+    [
+      "JavaScript",
+      16040
+    ],
+    [
+      "TypeScript",
+      15691
+    ],
+    [
+      "Kotlin",
+      6860
+    ],
+    [
+      "Python",
+      5561
+    ],
+    [
+      "Rust",
+      4702
+    ],
+    [
+      "C",
+      4077
+    ],
+    [
+      "HTML",
+      3173
+    ],
+    [
+      "C++",
+      2565
+    ],
+    [
+      "Go",
+      2052
+    ],
+    [
+      "PowerShell",
+      1392
+    ],
+    [
+      "Lua",
+      1376
+    ],
+    [
+      "Swift",
+      675
+    ]
+  ],
+  "top_topics": [
+    [
+      "agent-skills",
+      3
+    ],
+    [
+      "claude-code",
+      3
+    ],
+    [
+      "android",
+      2
+    ],
+    [
+      "kotlin",
+      2
+    ],
+    [
+      "llm",
+      2
+    ],
+    [
+      "animation",
+      2
+    ],
+    [
+      "cli",
+      2
+    ],
+    [
+      "claude-skills",
+      2
+    ],
+    [
+      "accessibility",
+      1
+    ],
+    [
+      "ai-agent",
+      1
+    ]
+  ],
+  "top_repos": [
+    {
+      "name": "deepseek-ai/dsh-superagent-prototype",
+      "stars": 13767,
+      "language": "TypeScript",
+      "url": "https://github.com/deepseek-ai/dsh-superagent-prototype",
+      "description": "Towards a More Autonomous Agent System",
+      "created_at": "2026-10-31T09:32:46Z"
+    },
+    {
+      "name": "heydamir/unslop",
+      "stars": 6391,
+      "language": "JavaScript",
+      "url": "https://github.com/heydamir/unslop",
+      "description": "A Claude skill that turns vibecoded, AI-looking UI into a designed interface",
+      "created_at": "2026-10-29T15:41:21Z"
+    },
+    {
+      "name": "wangzan101/Mika",
+      "stars": 5474,
+      "language": "Kotlin",
+      "url": "https://github.com/wangzan101/Mika",
+      "description": "An on-device AI agent for Android that operates apps and the web to get things done for you.",
+      "created_at": "2026-10-29T14:34:07Z"
+    },
+    {
+      "name": "storytold/craft-anything",
+      "stars": 4702,
+      "language": "Rust",
+      "url": "https://github.com/storytold/craft-anything",
+      "description": "Craft Anything: understand how any software works, and craft your own.",
+      "created_at": "2026-10-31T14:50:00Z"
+    },
+    {
+      "name": "valentderah/totk-pc-recomp",
+      "stars": 4077,
+      "language": "C",
+      "url": "https://github.com/valentderah/totk-pc-recomp",
+      "description": "Static recompilation of The Legend of Zelda: Tears of the Kingdom to native Windows and Linux x86-64, with a Vulkan renderer. Game files not included.",
+      "created_at": "2026-10-29T12:32:46Z"
+    },
+    {
+      "name": "patch-gg/pixelfx",
+      "stars": 3584,
+      "language": "JavaScript",
+      "url": "https://github.com/patch-gg/pixelfx",
+      "description": "244 pixel art effects, every one a small piece of code. Plus a Claude Code skill to make your own.",
+      "created_at": "2026-10-30T06:43:25Z"
+    },
+    {
+      "name": "Djihads80/Eglantine",
+      "stars": 2565,
+      "language": "C++",
+      "url": "https://github.com/Djihads80/Eglantine",
+      "description": "VERY experimental Nintendo Switch 2 emulator",
+      "created_at": "2026-10-29T00:25:18Z"
+    },
+    {
+      "name": "paipiange/nvzhuang",
+      "stars": 2052,
+      "language": "Go",
+      "url": "https://github.com/paipiange/nvzhuang",
+      "description": "1407 张 AI 女装参考图集与虚拟试穿网站，支持中英检索、OpenAI Images / Gemini / 豆包及自定义 Base URL、API Key、模型。https://github.com/paipiange/nvzhuang",
+      "created_at": "2026-10-29T06:08:00Z"
+    },
+    {
+      "name": "lexifina/global-law",
+      "stars": 1705,
+      "language": "HTML",
+      "url": "https://github.com/lexifina/global-law",
+      "description": "Git for Global Law: the law of every country as one git history, each country's record a submodule, every commit one law taking effect",
+      "created_at": "2026-10-28T13:34:16Z"
+    },
+    {
+      "name": "BryceYuuu/RUN",
+      "stars": 1671,
+      "language": "Python",
+      "url": "https://github.com/BryceYuuu/RUN",
+      "description": "RUN · 润：海外移居手册（欧洲 36 国 · 110 条路线 · 主要移民地区）",
+      "created_at": "2026-10-29T11:28:43Z"
+    },
+    {
+      "name": "smithjohn78390/tongjiang-lab",
+      "stars": 1468,
+      "language": "HTML",
+      "url": "https://github.com/smithjohn78390/tongjiang-lab",
+      "description": "Free interactive 3D science lessons for high school · 铜匠实验室 · https://lab.tongjiang.app",
+      "created_at": "2026-10-28T04:29:29Z"
+    },
+    {
+      "name": "Arjun-Ingole/hop",
+      "stars": 1392,
+      "language": "PowerShell",
+      "url": "https://github.com/Arjun-Ingole/hop",
+      "description": "Install Linux next to Windows without a USB stick",
+      "created_at": "2026-10-30T19:40:45Z"
+    },
+    {
+      "name": "Verlintas/NOIR",
+      "stars": 1386,
+      "language": "Kotlin",
+      "url": "https://github.com/Verlintas/NOIR",
+      "description": "手机隐私审计：用 adb 扫出 Android 应用的权限、上报端点与数据流向，并给出可回滚的处置。Desktop Android leak audit: permissions, endpoints, data flows, reversible fixes.",
+      "created_at": "2026-10-31T21:34:39Z"
+    },
+    {
+      "name": "kevinraymond/florilegium",
+      "stars": 1376,
+      "language": "Lua",
+      "url": "https://github.com/kevinraymond/florilegium",
+      "description": "Procedurally generated Delft-blue floral page margins for LuaLaTeX, drawn in Lua",
+      "created_at": "2026-10-30T07:49:05Z"
+    },
+    {
+      "name": "elvarofficial/teardown",
+      "stars": 1301,
+      "language": "JavaScript",
+      "url": "https://github.com/elvarofficial/teardown",
+      "description": "A Claude Code skill that turns any machine into a 3D simulator you can take apart",
+      "created_at": "2026-10-30T09:29:01Z"
+    },
+    {
+      "name": "caru-ini/stack-diagram",
+      "stars": 1242,
+      "language": "TypeScript",
+      "url": "https://github.com/caru-ini/stack-diagram",
+      "description": "Agent skill: describe your stack in a sentence, get an architecture diagram with official logos",
+      "created_at": "2026-11-01T05:35:12Z"
+    },
+    {
+      "name": "HRuiCcc/RuiC-PoseAtlas",
+      "stars": 1071,
+      "language": "JavaScript",
+      "url": "https://github.com/HRuiCcc/RuiC-PoseAtlas",
+      "description": "RuiC-PoseAtlas｜姿态 + 衣装双图鉴：288 组人体姿态 × 5 视角 × 1,439 张人台线稿，加 1,407 套无人物衣装 × 8 分类 × 86 个三语标签。中/英/日切换、搜索筛选、键盘浏览、原图下载，纯静态零依赖。",
+      "created_at": "2026-10-28T07:00:53Z"
+    },
+    {
+      "name": "NiazMorshed2007/reanimate",
+      "stars": 965,
+      "language": "JavaScript",
+      "url": "https://github.com/NiazMorshed2007/reanimate",
+      "description": "A Claude Code skill that reverse-engineers any animation frame by frame, then proves the copy moves the same.",
+      "created_at": "2026-10-29T06:20:59Z"
+    },
+    {
+      "name": "jacke-pp/open-yoki",
+      "stars": 862,
+      "language": "JavaScript",
+      "url": "https://github.com/jacke-pp/open-yoki",
+      "description": "An AI live-stream host that runs on one server: voice, face, chat, memory, posts. The base yoki runs on. By Jacke_pp · contact: DM @Jacke_pp on X",
+      "created_at": "2026-10-28T08:58:27Z"
+    },
+    {
+      "name": "hyz317/HairDeck",
+      "stars": 746,
+      "language": "Python",
+      "url": "https://github.com/hyz317/HairDeck",
+      "description": "HairDeck: Animation-Ready Stylized Hair Cards from a Single Image",
+      "created_at": "2026-10-29T17:16:13Z"
+    },
+    {
+      "name": "mromidev/claude-animated-shorts",
+      "stars": 682,
+      "language": "TypeScript",
+      "url": "https://github.com/mromidev/claude-animated-shorts",
+      "description": "Free Claude skill: viral animated story shorts (2D characters in a 3D world) with three.js + Remotion",
+      "created_at": "2026-11-01T05:50:38Z"
+    },
+    {
+      "name": "joeblau/subvox",
+      "stars": 675,
+      "language": "Swift",
+      "url": "https://github.com/joeblau/subvox",
+      "description": "",
+      "created_at": "2026-10-31T01:48:19Z"
+    },
+    {
+      "name": "sleepy-zone/ai-ref-library-cn",
+      "stars": 673,
+      "language": "JavaScript",
+      "url": "https://github.com/sleepy-zone/ai-ref-library-cn",
+      "description": "AI 作图素材库 · 中文版（脸 / 姿势 / 服装）",
+      "created_at": "2026-10-29T15:28:16Z"
+    },
+    {
+      "name": "ramenvr/autopilot",
+      "stars": 671,
+      "language": "Python",
+      "url": "https://github.com/ramenvr/autopilot",
+      "description": "Play any game",
+      "created_at": "2026-10-30T03:47:28Z"
+    },
+    {
+      "name": "speridlabs/idol-sdk",
+      "stars": 647,
+      "language": "Python",
+      "url": "https://github.com/speridlabs/idol-sdk",
+      "description": "Idol: a single image to 3D Gaussians. Inference SDK and demo.",
+      "created_at": "2026-10-28T19:44:27Z"
+    },
+    {
+      "name": "N1nEmAn/sapper-v2",
+      "stars": 617,
+      "language": "Python",
+      "url": "https://github.com/N1nEmAn/sapper-v2",
+      "description": "Autonomous pentest legion — AI commander + worker swarm + layered fact-intent graph. 3rd Tencent Intelligent Attack-Defense online champion (634 teams · 8h unattended · 1B tokens beat 4.5B). The Nüwa Test: give AIs Create/Language/History, let a civilization grow.",
+      "created_at": "2026-10-30T15:12:35Z"
+    },
+    {
+      "name": "AssassinCreator/steam-stash-value-report-card",
+      "stars": 613,
+      "language": "Python",
+      "url": "https://github.com/AssassinCreator/steam-stash-value-report-card",
+      "description": "Value your Steam stash in the terminal and print it as a share card: per game, per market, what sold and what sits. One Windows portable build, no account.",
+      "created_at": "2026-11-02T00:40:47Z"
+    },
+    {
+      "name": "Centiplatrap/pc-game-fps-doctor",
+      "stars": 607,
+      "language": "JavaScript",
+      "url": "https://github.com/Centiplatrap/pc-game-fps-doctor",
+      "description": "One button: why the game stutters, why it lags and why it won't start. Pitstop measures with PresentMon, explains in plain words, fixes Windows only, and undoes every change in one click.",
+      "created_at": "2026-10-31T23:46:51Z"
+    },
+    {
+      "name": "Pika-Labs/Pika-H3-Flex",
+      "stars": 596,
+      "language": "Python",
+      "url": "https://github.com/Pika-Labs/Pika-H3-Flex",
+      "description": "Pika H3 Flex: video and audio generation inference",
+      "created_at": "2026-10-29T17:08:59Z"
+    },
+    {
+      "name": "Humpalumps/Ultra-Water",
+      "stars": 586,
+      "language": "JavaScript",
+      "url": "https://github.com/Humpalumps/Ultra-Water",
+      "description": "Real-time FFT ocean renderer for three.js (WebGL2): shore breakers, foam, caustics, underwater rendering and buoyancy at 170–300 fps",
+      "created_at": "2026-10-28T16:27:44Z"
+    }
+  ]
+}
