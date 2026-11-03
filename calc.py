@@ -1,4 +1,4 @@
-"""零依赖计算工具，配合 Git 版本管理实践使用。"""
+"""零依赖计算工具，支持四则运算。"""
 
 
 def add(a, b):
@@ -9,3 +9,8 @@ def add(a, b):
 def sub(a, b):
     """减法。"""
     return a - b
+
+
+def mul(a, b):
+    """乘法。"""
+    return a * b
