@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>智能行程规划 · 高德实时路线</title>
+<style>
+  :root{--bg:#0b1220;--card:#111a2e;--line:#1e2b45;--fg:#e6edfb;--muted:#8b9ab8;--a:#5eead4}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--fg);font-family:-apple-system,"PingFang SC",sans-serif;height:100vh;display:flex;flex-direction:column}
+  header{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  h1{font-size:17px;font-weight:600}
+  .sub{font-size:12px;color:var(--muted);margin-top:3px}
+  .ctrl{display:flex;gap:8px;align-items:center;font-size:13px}
+  button{background:var(--a);color:#06121a;border:none;border-radius:9px;padding:8px 14px;font-weight:600;cursor:pointer}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--fg);font-weight:400}
+  #map{flex:1;min-height:320px}
+  .panel{position:absolute;left:18px;top:74px;width:290px;background:rgba(17,26,46,.94);
+         border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13px;
+         backdrop-filter:blur(8px);max-height:62vh;overflow:auto}
+  .row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed #1b2740}
+  .row:last-child{border:none}
+  .k{color:var(--muted)}
+  .warn{color:#fbbf24;font-size:12.5px;line-height:1.7}
+  code{color:var(--a)}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>智能行程规划 · 高德实时路线</h1>
+    <div class="sub">可缩放地图 · 驾车路线折线 · 距离与耗时</div>
+  </div>
+  <div class="ctrl">
+    <button id="planBtn">规划路线</button>
+    <button class="ghost" id="resetBtn">重置视野</button>
+  </div>
+</header>
+<div id="map"></div>
+
+<div class="panel" id="panel">
+  <div class="row"><span class="k">状态</span><span id="status">初始化…</span></div>
+  <div id="result"></div>
+</div>
+
+<script>
+  // 读取 Key：优先 config.json，其次 window.AMAP_KEYS
+  async function loadKeys() {
+    if (window.AMAP_KEYS) return window.AMAP_KEYS;
+    try {
+      const r = await fetch('../config.json', { cache: 'no-store' });
+      if (r.ok) {
+        const cfg = await r.json();
+        return (cfg && cfg.amap) || {};
+      }
+    } catch (e) { /* 忽略 */ }
+    return {};
+  }
+
+  function injectAMap(jsKey, securityCode) {
+    return new Promise((resolve, reject) => {
+      if (securityCode) window._AMapSecurityConfig = { securityJsCode: securityCode };
+      const s = document.createElement('script');
+      s.src = 'https://webapi.amap.com/maps?v=2.0&key=' + encodeURIComponent(jsKey);
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  const POINTS = [
+    { name: '故宫博物院', lnglat: [116.397, 39.918] },
+    { name: '天安门广场', lnglat: [116.391, 39.907] },
+    { name: '南锣鼓巷', lnglat: [116.403, 39.937] },
+  ];
+
+  const statusEl = document.getElementById('status');
+  const resultEl = document.getElementById('result');
+  let map = null;
+
+  function setStatus(t) { statusEl.textContent = t; }
+
+  async function init() {
+    const keys = await loadKeys();
+    const jsKey = keys.js_key || '';
+    if (!jsKey || jsKey.startsWith('请填入')) {
+      setStatus('缺少 Key');
+      resultEl.innerHTML = '<div class="warn">未配置高德 Web端(JS API) Key。<br>'
+        + '请复制 <code>config.example.json</code> 为 <code>config.json</code>，'
+        + '填入 <code>amap.js_key</code> 后刷新。<br><br>'
+        + '拿到 Key 后本页会加载可缩放地图、绘制驾车路线折线并显示距离与耗时。</div>';
+      return;
+    }
+    try {
+      await injectAMap(jsKey, keys.security_code);
+    } catch (e) {
+      setStatus('SDK 加载失败');
+      resultEl.innerHTML = '<div class="warn">高德 JS API 加载失败，请检查 Key 与网络。</div>';
+      return;
+    }
+    setStatus('地图就绪');
+    map = new AMap.Map('map', {
+      zoom: 13,
+      center: POINTS[0].lnglat,
+      viewMode: '2D',
+      mapStyle: 'amap://styles/darkblue',
+    });
+    POINTS.forEach((p) => {
+      new AMap.Marker({ position: p.lnglat, title: p.name, map });
+    });
+    map.setFitView();
+  }
+
+  async function planRoute() {
+    if (!map) { setStatus('地图未就绪'); return; }
+    setStatus('规划中…');
+    const origin = POINTS[0].lnglat.join(',');
+    const dest = POINTS[2].lnglat.join(',');
+    AMap.plugin('AMap.Driving', function () {
+      const driving = new AMap.Driving({
+        policy: AMap.DrivingPolicy.LEAST_TIME,
+        map: map,
+      });
+      driving.search(
+        new AMap.LngLat(POINTS[0].lnglat[0], POINTS[0].lnglat[1]),
+        new AMap.LngLat(POINTS[2].lnglat[0], POINTS[2].lnglat[1]),
+        function (status, result) {
+          if (status === 'complete' && result.routes && result.routes.length) {
+            const r = result.routes[0];
+            setStatus('已完成');
+            resultEl.innerHTML =
+              '<div class="row"><span class="k">起点</span><span>' + POINTS[0].name + '</span></div>' +
+              '<div class="row"><span class="k">终点</span><span>' + POINTS[2].name + '</span></div>' +
+              '<div class="row"><span class="k">距离</span><span>' + (r.distance / 1000).toFixed(2) + ' km</span></div>' +
+              '<div class="row"><span class="k">预计耗时</span><span>' + Math.round(r.time / 60) + ' 分钟</span></div>';
+          } else {
+            setStatus('规划失败');
+            resultEl.innerHTML = '<div class="warn">路线规划失败，请检查 Key 是否开通 Web服务。</div>';
+          }
+        }
+      );
+    });
+  }
+
+  document.getElementById('planBtn').onclick = planRoute;
+  document.getElementById('resetBtn').onclick = () => { if (map) map.setFitView(); };
+  init();
+</script>
+</body>
+</html>

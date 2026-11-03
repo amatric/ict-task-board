@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "amap-maps": {
+      "command": "npx",
+      "args": ["-y", "@amap/amap-maps-mcp-server"],
+      "env": {
+        "AMAP_MAPS_API_KEY": "${env:AMAP_MAPS_API_KEY}"
+      }
+    },
+    "trip-planner": {
+      "command": "python3",
+      "args": ["${workspaceFolder}/server.py"]
+    }
+  }
+}

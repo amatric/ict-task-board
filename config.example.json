@@ -1,0 +1,7 @@
+{
+  "amap": {
+    "web_key": "请填入高德开放平台 Web服务 Key",
+    "js_key": "请填入高德开放平台 Web端(JS API) Key",
+    "security_code": "如开启JS API安全密钥请填"
+  }
+}
