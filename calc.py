@@ -14,3 +14,10 @@ def sub(a, b):
 def mul(a, b):
     """乘法。"""
     return a * b
+
+
+def div(a, b):
+    """除法，除数为 0 时抛 ValueError。"""
+    if b == 0:
+        raise ValueError("除数不能为 0")
+    return a / b
