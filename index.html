@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>PixelTuner · 像素级还原的可视化调校台</title>
+<style>
+  :root{
+    --bg:#0a0e1a; --bg-2:#111827; --line:#1f2a44; --fg:#e8eefc; --muted:#8b9ab8;
+    --accent:#5eead4; --accent-2:#818cf8; --warn:#fbbf24;
+    --r-sm:10px; --r-md:16px; --r-lg:24px;
+    --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:24px; --s-6:32px; --s-7:48px; --s-8:64px;
+    --dur:.32s; --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:radial-gradient(1200px 600px at 80% -10%, rgba(129,140,248,.18), transparent 60%),
+               radial-gradient(900px 500px at 0% 0%, rgba(94,234,212,.12), transparent 55%),
+               var(--bg);
+    color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    line-height:1.65; -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:0 var(--s-5)}
+  /* 导航 */
+  header{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);
+         background:rgba(10,14,26,.72);border-bottom:1px solid var(--line)}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .logo{display:flex;align-items:center;gap:var(--s-2);font-weight:700;letter-spacing:.2px}
+  .logo i{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;font-style:normal;
+          background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#06121a;font-size:15px}
+  .nav-links{display:flex;gap:var(--s-5);font-size:14px;color:var(--muted)}
+  .nav-links a{color:inherit;text-decoration:none;transition:color var(--dur) var(--ease)}
+  .nav-links a:hover{color:var(--fg)}
+  .btn{border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:999px;
+       padding:9px 18px;font-size:14px;cursor:pointer;transition:all var(--dur) var(--ease)}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));border:none;color:#06121a;font-weight:600}
+  .btn-primary:hover{filter:brightness(1.08);color:#06121a;transform:translateY(-1px)}
+  @media(max-width:760px){.nav-links{display:none}}
+  /* Hero */
+  .hero{padding:var(--s-8) 0 var(--s-7);display:grid;grid-template-columns:1.15fr .85fr;gap:var(--s-7);align-items:center}
+  @media(max-width:900px){.hero{grid-template-columns:1fr;padding:var(--s-7) 0 var(--s-6)}}
+  .eyebrow{display:inline-flex;align-items:center;gap:var(--s-2);font-size:12px;color:var(--accent);
+           border:1px solid rgba(94,234,212,.35);background:rgba(94,234,212,.08);
+           padding:5px 12px;border-radius:999px;margin-bottom:var(--s-4)}
+  .eyebrow span{width:6px;height:6px;border-radius:50%;background:var(--accent);
+                box-shadow:0 0 0 4px rgba(94,234,212,.15);animation:pulse 2.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  h1{font-size:clamp(30px,4.6vw,52px);line-height:1.15;letter-spacing:-.02em;font-weight:700}
+  h1 em{font-style:normal;background:linear-gradient(120deg,var(--accent),var(--accent-2));
+        -webkit-background-clip:text;background-clip:text;color:transparent}
+  .lead{margin-top:var(--s-4);font-size:17px;color:var(--muted);max-width:52ch}
+  .cta{display:flex;gap:var(--s-3);margin-top:var(--s-6);flex-wrap:wrap}
+  /* 调校面板 */
+  .panel{background:linear-gradient(180deg,rgba(17,24,39,.9),rgba(10,14,26,.9));
+         border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--s-5);
+         box-shadow:0 24px 60px -24px rgba(0,0,0,.8)}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:var(--s-4)}
+  .dots{display:flex;gap:6px}
+  .dots i{width:10px;height:10px;border-radius:50%;background:#243049}
+  .dots i:first-child{background:#f87171}.dots i:nth-child(2){background:#fbbf24}.dots i:nth-child(3){background:#34d399}
+  .row{display:flex;align-items:center;gap:var(--s-3);padding:var(--s-2) 0}
+  .row label{font-size:12px;color:var(--muted);width:64px;flex:none}
+  .track{position:relative;height:6px;border-radius:999px;background:#1b2438;flex:1;overflow:hidden}
+  .track b{position:absolute;left:0;top:0;bottom:0;border-radius:999px;
+           background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width var(--dur) var(--ease)}
+  .row output{font-size:12px;color:var(--fg);width:44px;text-align:right;font-variant-numeric:tabular-nums}
+  .swatches{display:flex;gap:var(--s-2);margin-top:var(--s-3)}
+  .sw{width:26px;height:26px;border-radius:8px;cursor:pointer;border:2px solid transparent;transition:all var(--dur) var(--ease)}
+  .sw:hover,.sw.on{border-color:#fff;transform:scale(1.08)}
+  /* 特性 */
+  section{padding:var(--s-7) 0}
+  .sec-head{text-align:center;margin-bottom:var(--s-6)}
+  .sec-head h2{font-size:clamp(22px,3vw,32px);letter-spacing:-.01em}
+  .sec-head p{color:var(--muted);margin-top:var(--s-2);font-size:15px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:var(--s-4)}
+  .card{background:linear-gradient(180deg,rgba(17,24,39,.85),rgba(10,14,26,.7));
+        border:1px solid var(--line);border-radius:var(--r-md);padding:var(--s-5);
+        transition:transform var(--dur) var(--ease),border-color var(--dur) var(--ease)}
+  .card:hover{transform:translateY(-4px);border-color:rgba(94,234,212,.45)}
+  .card .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:18px;
+            background:rgba(94,234,212,.1);border:1px solid rgba(94,234,212,.25);margin-bottom:var(--s-3)}
+  .card h3{font-size:16px;margin-bottom:var(--s-2)}
+  .card p{font-size:13.5px;color:var(--muted)}
+  /* 数据 */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s-4);
+         border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--s-5);
+         background:linear-gradient(180deg,rgba(17,24,39,.6),transparent)}
+  @media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{text-align:center}
+  .stat b{display:block;font-size:clamp(22px,3vw,32px);font-variant-numeric:tabular-nums;
+          background:linear-gradient(120deg,var(--accent),var(--accent-2));
+          -webkit-background-clip:text;background-clip:text;color:transparent}
+  .stat span{font-size:12.5px;color:var(--muted)}
+  /* 对比 */
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-4)}
+  @media(max-width:760px){.compare{grid-template-columns:1fr}}
+  .cmp{border:1px solid var(--line);border-radius:var(--r-md);padding:var(--s-5)}
+  .cmp.bad{border-color:rgba(248,113,113,.35)}
+  .cmp.good{border-color:rgba(94,234,212,.4);background:rgba(94,234,212,.04)}
+  .cmp h4{font-size:14px;margin-bottom:var(--s-3)}
+  .cmp ul{list-style:none;font-size:13.5px;color:var(--muted);display:grid;gap:var(--s-2)}
+  .cmp li{display:flex;gap:var(--s-2)}
+  .cmp li::before{content:"—";color:#3b4a68}
+  .cmp.good li::before{content:"✓";color:var(--accent)}
+  /* 页脚 */
+  footer{border-top:1px solid var(--line);padding:var(--s-6) 0 var(--s-7);color:var(--muted);font-size:13px}
+  .foot{display:flex;justify-content:space-between;gap:var(--s-4);flex-wrap:wrap}
+  .reveal{opacity:0;transform:translateY(18px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
+  .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <div class="logo"><i>◈</i> PixelTuner</div>
+    <nav class="nav-links">
+      <a href="#features">能力</a>
+      <a href="#compare">对比</a>
+      <a href="#metrics">数据</a>
+    </nav>
+    <a class="btn btn-primary" href="#features" style="text-decoration:none">开始调校</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div>
+      <div class="eyebrow"><span></span>内置浏览器 · 像素级回归</div>
+      <h1>把 web 页面调到<em>像素级一致</em>，而不是"看着差不多"</h1>
+      <p class="lead">
+        改一行 CSS 就能看出 1px 的偏移。PixelTuner 用内置浏览器实时渲染，
+        把间距、圆角、动效曲线全部参数化，调完直接对照设计稿验收。
+      </p>
+      <div class="cta">
+        <a class="btn btn-primary" href="#features" style="text-decoration:none">看看怎么调</a>
+        <a class="btn" href="#compare" style="text-decoration:none">和手调对比</a>
+      </div>
+    </div>
+
+    <aside class="panel" aria-label="调校面板演示">
+      <div class="panel-head"><span>design-tokens.css</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <div class="row"><label>间距</label><div class="track"><b style="width:42%"></b></div><output>24px</output></div>
+      <div class="row"><label>圆角</label><div class="track"><b style="width:66%"></b></div><output>16px</output></div>
+      <div class="row"><label>动效</label><div class="track"><b style="width:32%"></b></div><output>320ms</output></div>
+      <div class="row"><label>字重</label><div class="track"><b style="width:54%"></b></div><output>600</output></div>
+      <div class="swatches" style="margin-top:14px">
+        <div class="sw on" style="background:#5eead4"></div>
+        <div class="sw" style="background:#818cf8"></div>
+        <div class="sw" style="background:#fbbf24"></div>
+        <div class="sw" style="background:#f87171"></div>
+        <div class="sw" style="background:#34d399"></div>
+      </div>
+    </aside>
+  </section>
+
+  <section id="features">
+    <div class="sec-head reveal">
+      <h2>四件事，让"调页面"变得可验收</h2>
+      <p>不是靠肉眼，是靠可复现的对照</p>
+    </div>
+    <div class="grid">
+      <article class="card reveal"><div class="ic">◱</div><h3>设计 token 化</h3><p>间距、圆角、字号、动效曲线全部抽成 CSS 变量，改一处全站生效，不会漏掉某个角落。</p></article>
+      <article class="card reveal"><div class="ic">◐</div><h3>实时渲染对照</h3><p>内置浏览器即时渲染，滚动、悬停、断点三种状态一起看，避免只对静态截图调。</p></article>
+      <article class="card reveal"><div class="ic">⌁</div><h3>响应式断点</h3><p>760 / 900 / 1180 三档断点用 clamp 与 grid 自适应，不写死像素宽度。</p></article>
+      <article class="card reveal"><div class="ic">☉</div><h3>无障碍与动效降级</h3><p>遵循 prefers-reduced-motion，动效可关；aria-label、对比度、焦点可见都补齐。</p></article>
+    </div>
+  </section>
+
+  <section id="compare">
+    <div class="sec-head reveal">
+      <h2>手调 vs 参数化</h2>
+      <p>同样一个卡片，两种做法的差别</p>
+    </div>
+    <div class="compare">
+      <div class="cmp bad reveal">
+        <h4>手调 CSS</h4>
+        <ul>
+          <li>padding 散落各处，改一处漏三处</li>
+          <li>断点靠试，宽度写死 375px</li>
+          <li>动效时长随手填，节奏不统一</li>
+          <li>改完只能靠截图肉眼看</li>
+        </ul>
+      </div>
+      <div class="cmp good reveal">
+        <h4>PixelTuner</h4>
+        <ul>
+          <li>token 统一管理，改一处全站生效</li>
+          <li>clamp + auto-fit 自适应，无写死宽度</li>
+          <li>动效曲线与时长统一为变量</li>
+          <li>三档断点实时对照验收</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="metrics">
+    <div class="stats reveal">
+      <div class="stat"><b>0</b><span>第三方依赖</span></div>
+      <div class="stat"><b>3</b><span>响应式断点</span></div>
+      <div class="stat"><b>100%</b><span>CSS 变量覆盖</span></div>
+      <div class="stat"><b>&lt;14KB</b><span>单文件体积</span></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span>PixelTuner · 华为 ICT 大赛云赛道 赛题5 参评作品</span>
+    <span>纯 HTML + CSS，无构建、无依赖</span>
+  </div>
+</footer>
+
+<script>
+  // 滚动进场
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+
+  // 色板交互
+  document.querySelectorAll('.sw').forEach((sw) => {
+    sw.addEventListener('click', () => {
+      document.querySelectorAll('.sw').forEach((s) => s.classList.remove('on'));
+      sw.classList.add('on');
+      const c = getComputedStyle(sw).backgroundColor;
+      document.documentElement.style.setProperty('--accent', c);
+      document.querySelectorAll('.track b').forEach((b) => {
+        b.style.background = 'linear-gradient(90deg,' + c + ',var(--accent-2))';
+      });
+    });
+  });
+</script>
+</body>
+</html>
