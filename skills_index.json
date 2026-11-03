@@ -1,0 +1,303 @@
+{
+  "version": "1.0.0",
+  "note": "华为云能力索引：把「用户目标」映射到「具体服务与调用入口」。条目按 category 分组，keywords 用于检索。",
+  "items": [
+    {
+      "id": "ecs-basic",
+      "name": "弹性云服务器 ECS",
+      "category": "计算",
+      "keywords": [
+        "服务器",
+        "虚拟机",
+        "主机",
+        "部署",
+        "跑服务",
+        "ecs"
+      ],
+      "summary": "通用计算实例，用于部署后端服务、网站、数据库客户端。",
+      "entry": "控制台 / API: POST /v1/{project_id}/cloudservers",
+      "boundary": "长期常驻负载；短任务用函数工作流更省",
+      "example": "curl -X POST $ECS/v1/$PID/cloudservers -H \"X-Auth-Token: $TOKEN\" -d '{\"server\":{\"name\":\"web\",\"flavorRef\":\"s6.large.2\",\"imageRef\":\"<img>\",\"vpcid\":\"<vpc>\",\"nics\":[{\"subnet_id\":\"<subnet>\"}]}}'"
+    },
+    {
+      "id": "obs-lifecycle",
+      "name": "对象存储 OBS + 生命周期",
+      "category": "存储",
+      "keywords": [
+        "存储",
+        "对象存储",
+        "归档",
+        "日志",
+        "图片",
+        "备份",
+        "便宜",
+        "obs"
+      ],
+      "summary": "海量非结构化存储，生命周期规则可自动把冷数据转低频/归档，显著降本。",
+      "entry": "obsutil / API: PUT /?lifecycle",
+      "boundary": "需要块设备或文件系统语义时用 EVS/SFS",
+      "example": "obsutil lifecycle obs://my-bucket -rule '{\"transitions\":[{\"days\":30,\"storageClass\":\"STANDARD_IA\"},{\"days\":180,\"storageClass\":\"GLACIER\"}]}'"
+    },
+    {
+      "id": "rds-mysql",
+      "name": "云数据库 RDS for MySQL",
+      "category": "数据库",
+      "keywords": [
+        "数据库",
+        "mysql",
+        "关系型",
+        "读写分离",
+        "备份",
+        "高可用"
+      ],
+      "summary": "托管 MySQL，自带主备、备份、只读实例与参数模板。",
+      "entry": "控制台 / API: POST /v3/{project_id}/instances",
+      "boundary": "强事务+SQL 选它；海量宽表分析可看 GaussDB/DWS",
+      "example": "mysql -h <rds-host> -u admin -p -e 'SHOW DATABASES;'"
+    },
+    {
+      "id": "drs-migration",
+      "name": "数据复制服务 DRS",
+      "category": "数据库",
+      "keywords": [
+        "迁移",
+        "同步",
+        "上云",
+        "数据搬迁",
+        "drs"
+      ],
+      "summary": "在线迁移/实时同步，支持 MySQL/PG/GaussDB 等，先预检查再全量+增量。",
+      "entry": "控制台 → 数据复制服务 → 创建迁移任务",
+      "boundary": "离线一次性搬迁也可用 DRS，但更推荐 mysqldump + OBS",
+      "example": "控制台创建任务 → 源/目标连通性预检查全绿 → 启动全量+增量 → 观察时延"
+    },
+    {
+      "id": "modelarts-train",
+      "name": "ModelArts 模型训练与部署",
+      "category": "AI",
+      "keywords": [
+        "训练",
+        "模型",
+        "推理",
+        "部署",
+        "ai",
+        "modelarts",
+        "微调"
+      ],
+      "summary": "托管训练作业 + 在线服务部署，支持自定义镜像与自动学习。",
+      "entry": "控制台 / SDK: modelarts.session.Session",
+      "boundary": "只是调用现成大模型 API 的话用 MaaS，不必上 ModelArts",
+      "example": "from modelarts.session import Session\ns = Session()\ns.upload_data('/local/train', bucket, '/train')"
+    },
+    {
+      "id": "maas-llm",
+      "name": "MaaS 模型即服务",
+      "category": "AI",
+      "keywords": [
+        "大模型",
+        "llm",
+        "推理",
+        "api",
+        "问答",
+        "对话",
+        "deepseek"
+      ],
+      "summary": "按 token 计费直接调大模型推理接口，兼容 OpenAI 风格。",
+      "entry": "POST /v1/chat/completions",
+      "boundary": "需要私有微调/独占算力时，用 ModelArts 或 ECS 自建 vLLM",
+      "example": "curl $MAAS/v1/chat/completions -H \"Authorization: Bearer $KEY\" -d '{\"model\":\"deepseek-chat\",\"messages\":[{\"role\":\"user\",\"content\":\"你好\"}]}'"
+    },
+    {
+      "id": "cce-k8s",
+      "name": "云容器引擎 CCE",
+      "category": "容器",
+      "keywords": [
+        "容器",
+        "kubernetes",
+        "k8s",
+        "编排",
+        "微服务",
+        "cce"
+      ],
+      "summary": "托管 K8s 集群，支持节点池、弹性伸缩、负载均衡 Ingress。",
+      "entry": "控制台 / kubectl",
+      "boundary": "单个小容器用 CCI 更轻；要完全自管控制面可用 CCE 的鲲鹏/裸金属节点",
+      "example": "kubectl create deployment web --image=nginx:alpine --replicas=2"
+    },
+    {
+      "id": "elb-ha",
+      "name": "弹性负载均衡 ELB + 弹性伸缩 AS",
+      "category": "网络",
+      "keywords": [
+        "负载均衡",
+        "高可用",
+        "扩容",
+        "流量",
+        "elb",
+        "as"
+      ],
+      "summary": "ELB 分发流量，AS 按 CPU/定时策略自动增减实例，组合成弹性架构。",
+      "entry": "控制台 / API: POST /v2/{project_id}/elb/loadbalancers",
+      "boundary": "单机够用就别上；AS 需要无状态服务才好扩",
+      "example": "控制台：建 ELB → 后端组加两台 ECS → 健康检查 HTTP:80 → 监听器 80 转发"
+    },
+    {
+      "id": "iam-sts",
+      "name": "IAM 委托与 STS 临时凭证",
+      "category": "安全",
+      "keywords": [
+        "权限",
+        "凭证",
+        "临时",
+        "安全",
+        "sts",
+        "委托",
+        "iam"
+      ],
+      "summary": "用委托 + AssumeAgency 换 900 秒 STS 临时凭证，避免长期 AK/SK 落盘。",
+      "entry": "hcloud sts AssumeAgency / IAM API",
+      "boundary": "跨账号访问才需要委托；同账号内直接用 IAM 用户权限",
+      "example": "hcloud sts AssumeAgency --agency-name=SELF_VERIFY --cli-region=cn-north-4 --cli-output=tsv"
+    },
+    {
+      "id": "coc-runcommand",
+      "name": "云运维中心 COC 批量命令",
+      "category": "运维",
+      "keywords": [
+        "批量",
+        "命令",
+        "运维",
+        "脚本",
+        "巡检",
+        "coc"
+      ],
+      "summary": "对多台 ECS 批量下发脚本/命令，适合巡检与批量变更。",
+      "entry": "控制台 / API: POST /v1/{project_id}/coc/commands",
+      "boundary": "单机临时排查直接 SSH 更快",
+      "example": "控制台 → 云运维中心 → 脚本管理 → 选择实例 → 执行（支持 Shell/Python）"
+    },
+    {
+      "id": "aom-monitor",
+      "name": "应用运维管理 AOM 监控告警",
+      "category": "运维",
+      "keywords": [
+        "监控",
+        "告警",
+        "日志",
+        "指标",
+        "aom",
+        "可观测"
+      ],
+      "summary": "指标/日志/告警统一入口，可对 ECS、容器、自定义指标设阈值告警。",
+      "entry": "控制台 / API: POST /v2/{project_id}/aom/alarm-rules",
+      "boundary": "只看单机资源用 CES 足够；要日志检索+链路追踪上 AOM/LTS",
+      "example": "控制台 → AOM → 告警规则 → 选指标（CPU>80%）→ 通知组"
+    },
+    {
+      "id": "codearts-pipeline",
+      "name": "CodeArts 流水线",
+      "category": "研发",
+      "keywords": [
+        "ci",
+        "cd",
+        "流水线",
+        "构建",
+        "发布",
+        "codearts"
+      ],
+      "summary": "代码检查→构建→测试→部署全链路，支持容器镜像推送与灰度。",
+      "entry": "控制台 / CodeArts Pipeline",
+      "boundary": "只有简单脚本需求可用 ECS + cron，不必上流水线",
+      "example": "流水线五段：代码检查 → 编译构建 → 单元测试 → 部署(CCE/ECS) → 发布"
+    },
+    {
+      "id": "ocr-text",
+      "name": "文字识别 OCR",
+      "category": "AI",
+      "keywords": [
+        "图片",
+        "文字识别",
+        "ocr",
+        "票据",
+        "身份证",
+        "截图",
+        "提取文字"
+      ],
+      "summary": "从图片/PDF 中提取文字，支持通用表格、票据、证件等专用模板。",
+      "entry": "控制台 / API: POST /v2/{project_id}/ocr/general-text",
+      "boundary": "手写体或极低质量图片识别率有限；需要更强理解可叠加 LLM",
+      "example": "import base64,requests\nimg=base64.b64encode(open('a.png','rb').read()).decode()\nrequests.post(url,headers=H,json={'image':img})"
+    },
+    {
+      "id": "fgs-func",
+      "name": "函数工作流 FunctionGraph",
+      "category": "计算",
+      "keywords": [
+        "函数",
+        "serverless",
+        "定时",
+        "事件",
+        "轻量",
+        "fgs",
+        "按需"
+      ],
+      "summary": "按需执行的事件驱动计算，适合定时任务、Webhook、轻量 API。",
+      "entry": "控制台 / API: POST /v2/{project_id}/fgs/functions",
+      "boundary": "长时任务(>15min)或常驻服务用 ECS",
+      "example": "函数 + 定时触发器 cron: 0 */6 * * * ? 每 6 小时跑一次"
+    },
+    {
+      "id": "dws-olap",
+      "name": "数据仓库 DWS / GaussDB(DWS)",
+      "category": "数据库",
+      "keywords": [
+        "数仓",
+        "olap",
+        "分析",
+        "报表",
+        "大数据",
+        "dws",
+        "海量"
+      ],
+      "summary": "列存 MPP 数仓，适合海量数据聚合分析与报表。",
+      "entry": "控制台 / API: POST /v1.0/{project_id}/clusters",
+      "boundary": "高并发小事务用 RDS；非结构化检索用 CSS",
+      "example": "CREATE TABLE s(id int, amt numeric) WITH (ORIENTATION=COLUMN);"
+    },
+    {
+      "id": "css-search",
+      "name": "云搜索服务 CSS",
+      "category": "数据库",
+      "keywords": [
+        "搜索",
+        "全文检索",
+        "elasticsearch",
+        "日志检索",
+        "css",
+        "opensearch"
+      ],
+      "summary": "托管 Elasticsearch/OpenSearch，做全文检索与日志分析。",
+      "entry": "REST: PUT /{index}",
+      "boundary": "简单前缀匹配用数据库索引即可",
+      "example": "curl -u admin:pwd -X PUT $ES/books -H 'Content-Type: application/json' -d '{\"mappings\":{\"properties\":{\"title\":{\"type\":\"text\"}}}}'"
+    },
+    {
+      "id": "waf-ddos",
+      "name": "WAF + DDoS 高防",
+      "category": "安全",
+      "keywords": [
+        "防护",
+        "攻击",
+        "ddos",
+        "waf",
+        "安全",
+        "cc攻击",
+        "网站防护"
+      ],
+      "summary": "WAF 拦应用层攻击，DDoS 高防抗流量攻击。",
+      "entry": "控制台 → WAF → 添加防护域名",
+      "boundary": "纯内网服务无需 WAF",
+      "example": "WAF 接入：域名 CNAME 到 WAF 回源地址，按需开 CC 防护"
+    }
+  ]
+}
