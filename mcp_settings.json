@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "huaweicloud": {
+      "command": "python3",
+      "args": ["${workspaceFolder}/server.py"],
+      "env": {
+        "HUAWEICLOUD_SDK_AK": "${env:HUAWEICLOUD_SDK_AK}",
+        "HUAWEICLOUD_SDK_SK": "${env:HUAWEICLOUD_SDK_SK}",
+        "HUAWEICLOUD_SDK_REGION": "cn-north-4"
+      }
+    }
+  }
+}
