@@ -18,6 +18,7 @@ import sys
 
 VERSION = "1.0.0"
 DEFAULT_REGION = os.environ.get("HWC_REGION", os.environ.get("HUAWEICLOUD_SDK_REGION", "cn-north-4"))
+REGION = DEFAULT_REGION  # 供数据层直接引用
 
 
 # ---------------------------------------------------------------- 输出
@@ -49,54 +50,138 @@ def fail(msg: str, hint: str = "", code: int = 1) -> int:
     return code
 
 
-# ---------------------------------------------------------------- 数据层
-# 为便于离线演示与自测，未配置凭证时返回内置样例数据；配置后切换到真实调用。
+# ---------------------------------------------------------------- 数据层（真实华为云 API 调用）
+# 认证：X-Auth-Token（由 IAM 获取，或直接注入 HUAWEICLOUD_SDK_SECURITY_TOKEN）
+# 端点：https://{service}.{region}.myhuaweicloud.com
 
-def _creds_ready() -> bool:
-    return bool(os.environ.get("HUAWEICLOUD_SDK_AK") and os.environ.get("HUAWEICLOUD_SDK_SK"))
+import base64
+import hashlib
+import hmac
+import mimetypes
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
 
 
-DEMO_ECS = [
-    {"name": "web-01", "id": "8f3c...a1", "status": "ACTIVE", "flavor": "s6.large.2", "ip": "192.168.0.10"},
-    {"name": "db-01", "id": "1d7e...b2", "status": "ACTIVE", "flavor": "c6.xlarge.4", "ip": "192.168.0.20"},
-]
-DEMO_EVS = [
-    {"name": "web-01-volume-0000", "size": 40, "type": "GPSSD", "status": "in-use"},
-    {"name": "data-disk", "size": 100, "type": "SSD", "status": "available"},
-]
+def _token() -> str:
+    tok = os.environ.get("HUAWEICLOUD_SDK_SECURITY_TOKEN") or os.environ.get("HWC_TOKEN", "")
+    if not tok:
+        raise RuntimeError(
+            "缺少 X-Auth-Token：请设置 HUAWEICLOUD_SDK_SECURITY_TOKEN"
+            "（由 IAM 换取），或 unset 后使用内置样例数据演示"
+        )
+    return tok
+
+
+def _project() -> str:
+    pid = os.environ.get("HUAWEICLOUD_SDK_PROJECT_ID") or os.environ.get("HWC_PROJECT_ID", "")
+    if not pid:
+        raise RuntimeError(
+            "缺少 project id：请设置 HUAWEICLOUD_SDK_PROJECT_ID"
+            "（控制台「我的凭证」里可查）"
+        )
+    return pid
+
+
+def _http(method: str, url: str, token: str, body: bytes | None = None,
+          headers: dict | None = None) -> tuple[int, bytes]:
+    h = {"Content-Type": "application/json", "X-Auth-Token": token}
+    if headers:
+        h.update(headers)
+    req = urllib.request.Request(url, data=body, method=method, headers=h)
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return r.status, r.read()
 
 
 def ecs_list(limit: int) -> list[dict]:
-    if _creds_ready():
-        return _real_call("ecs")
-    return DEMO_ECS[:limit]
+    """真实调用 ECS ListServersDetails。"""
+    tok, pid = _token(), _project()
+    url = f"https://ecs.{REGION}.myhuaweicloud.com/v2.1/{pid}/servers/detail"
+    _, raw = _http("GET", url, tok)
+    servers = json.loads(raw).get("servers", [])[:limit]
+    out = []
+    for s in servers:
+        ips = []
+        for addr_list in (s.get("addresses") or {}).values():
+            for a in addr_list:
+                if a.get("addr"):
+                    ips.append(a["addr"])
+        out.append({
+            "name": s.get("name"),
+            "id": s.get("id"),
+            "status": s.get("status"),
+            "flavor": (s.get("flavor") or {}).get("id"),
+            "ip": ",".join(ips),
+        })
+    return out
 
 
 def ecs_show(server_id: str) -> dict:
-    for s in (ecs_list(100)):
-        if s["id"].startswith(server_id) or server_id in s["id"]:
-            return s
-    raise LookupError(f"未找到实例 {server_id}")
+    tok, pid = _token(), _project()
+    url = f"https://ecs.{REGION}.myhuaweicloud.com/v2.1/{pid}/servers/{server_id}"
+    _, raw = _http("GET", url, tok)
+    s = json.loads(raw).get("server", {})
+    return {
+        "name": s.get("name"), "id": s.get("id"), "status": s.get("status"),
+        "created": s.get("created"), "flavor": (s.get("flavor") or {}),
+        "addresses": s.get("addresses"), "metadata": s.get("metadata"),
+    }
 
 
 def evs_list(limit: int) -> list[dict]:
-    if _creds_ready():
-        return _real_call("evs")
-    return DEMO_EVS[:limit]
+    """真实调用 EVS ListVolumesDetails。"""
+    tok, pid = _token(), _project()
+    url = f"https://evs.{REGION}.myhuaweicloud.com/v2/{pid}/cloudvolumes/detail"
+    _, raw = _http("GET", url, tok)
+    vols = json.loads(raw).get("volumes", [])[:limit]
+    return [{
+        "name": v.get("name"), "size": v.get("size"), "type": v.get("volume_type"),
+        "status": v.get("status"), "id": v.get("id"),
+        "attached": ",".join(a.get("server_id", "") for a in (v.get("attachments") or [])),
+    } for v in vols]
 
 
-def _real_call(kind: str) -> list[dict]:
-    """真实调用占位：接入官方 SDK 后替换。
+# ---- OBS：V2 签名，与 ECS/EVS 的 token 方式不同 ----
 
-    生产实现建议：
-        from huaweicloudsdkcore.auth.credentials import BasicCredentials
-        from huaweicloudsdkecs.v2 import EcsClient, ListServersDetailsRequest
-    """
-    raise RuntimeError(
-        "已配置 AK/SK，但本示例未内置官方 SDK。"
-        "生产环境请 pip install huaweicloudsdkecs 后在此处接入；"
-        "如需立即体验，请 unset HUAWEICLOUD_SDK_AK 使用内置样例数据。"
-    )
+def _obs_creds() -> tuple[str, str, str, str]:
+    ak = os.environ.get("OBS_AK") or os.environ.get("HUAWEICLOUD_SDK_AK", "")
+    sk = os.environ.get("OBS_SK") or os.environ.get("HUAWEICLOUD_SDK_SK", "")
+    tok = os.environ.get("OBS_SECURITY_TOKEN", "")
+    ep = os.environ.get("OBS_ENDPOINT", f"https://obs.{REGION}.myhuaweicloud.com")
+    if not ak or not sk:
+        raise RuntimeError("OBS 需要 AK/SK：设置 OBS_AK / OBS_SK（可选 OBS_SECURITY_TOKEN）")
+    return ak, sk, tok, ep
+
+
+def _obs_sign(method: str, bucket: str, key: str, content_md5: str, content_type: str,
+              date: str, sk: str, token: str = "") -> str:
+    resource = f"/{bucket}/{key}" if key else f"/{bucket}/"
+    sts = "\n".join([method, content_md5, content_type, date,
+                      ("x-obs-security-token:" + token + "\n" if token else "") + resource])
+    return base64.b64encode(hmac.new(sk.encode(), sts.encode(), hashlib.sha1).digest()).decode()
+
+
+def obs_ls(path: str, limit: int = 100) -> list[dict]:
+    """真实调用 OBS ListObjects（V2 签名 GET /?prefix=）。"""
+    if not path.startswith("obs://"):
+        raise ValueError("路径需形如 obs://bucket/prefix")
+    rest = path[len("obs://"):]
+    bucket, _, prefix = rest.partition("/")
+    ak, sk, tok, ep = _obs_creds()
+    date = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
+    sig = _obs_sign("GET", bucket, "", "", "", date, sk, tok)
+    headers = {"Authorization": f"OBS {ak}:{sig}", "Date": date}
+    if tok:
+        headers["x-obs-security-token"] = tok
+    url = f"{ep}/{bucket}?prefix={urllib.parse.quote(prefix)}&max-keys={limit}"
+    req = urllib.request.Request(url, method="GET", headers=headers)
+    with urllib.request.urlopen(req, timeout=30) as r:
+        body = r.read().decode("utf-8", "ignore")
+    import re
+    keys = re.findall(r"<Key>(.*?)</Key>", body)
+    sizes = re.findall(r"<Size>(.*?)</Size>", body)
+    return [{"key": k, "size": int(sz)} for k, sz in zip(keys, sizes)]
 
 
 # ---------------------------------------------------------------- 子命令
@@ -106,7 +191,9 @@ def cmd_region(args) -> int:
         "region": args.region,
         "ak_configured": bool(os.environ.get("HUAWEICLOUD_SDK_AK")),
         "sk_configured": bool(os.environ.get("HUAWEICLOUD_SDK_SK")),
-        "data_source": "cloud" if _creds_ready() else "builtin-demo",
+        "token_configured": bool(os.environ.get("HUAWEICLOUD_SDK_SECURITY_TOKEN") or os.environ.get("HWC_TOKEN")),
+        "project_configured": bool(os.environ.get("HUAWEICLOUD_SDK_PROJECT_ID") or os.environ.get("HWC_PROJECT_ID")),
+        "obs_ak_configured": bool(os.environ.get("OBS_AK") or os.environ.get("HUAWEICLOUD_SDK_AK")),
         "endpoints": {
             "ecs": f"https://ecs.{args.region}.myhuaweicloud.com",
             "evs": f"https://evs.{args.region}.myhuaweicloud.com",
@@ -117,11 +204,25 @@ def cmd_region(args) -> int:
     return 0
 
 
+DEMO_ECS = [
+    {"name": "web-01", "id": "8f3c...a1", "status": "ACTIVE", "flavor": "s6.large.2", "ip": "192.168.0.10"},
+    {"name": "db-01", "id": "1d7e...b2", "status": "ACTIVE", "flavor": "c6.xlarge.4", "ip": "192.168.0.20"},
+]
+DEMO_EVS = [
+    {"name": "web-01-volume-0000", "size": 40, "type": "GPSSD", "status": "in-use", "id": "v-1", "attached": "8f3c...a1"},
+    {"name": "data-disk", "size": 100, "type": "SSD", "status": "available", "id": "v-2", "attached": ""},
+]
+DEMO_OBS = [{"key": "reports/latest.md", "size": 3122}, {"key": "builds/dist.zip", "size": 1048576}]
+
+
 def cmd_ecs_list(args) -> int:
+    if args.demo:
+        emit(DEMO_ECS[:args.limit], args.json, [("NAME", "name"), ("ID", "id"), ("STATUS", "status"), ("FLAVOR", "flavor"), ("IP", "ip")])
+        return 0
     try:
         rows = ecs_list(args.limit)
     except RuntimeError as e:
-        return fail(str(e), "unset HUAWEICLOUD_SDK_AK / HUAWEICLOUD_SDK_SK 可回退到内置样例")
+        return fail(str(e), "未配凭证时可用 --demo 查看样例数据")
     emit(rows, args.json, [("NAME", "name"), ("ID", "id"), ("STATUS", "status"),
                            ("FLAVOR", "flavor"), ("IP", "ip")])
     return 0
@@ -130,24 +231,35 @@ def cmd_ecs_list(args) -> int:
 def cmd_ecs_show(args) -> int:
     try:
         emit(ecs_show(args.id), True)
-    except LookupError as e:
-        return fail(str(e))
+    except RuntimeError as e:
+        return fail(str(e), "未配凭证时可用 --demo 查看样例数据")
     return 0
 
 
 def cmd_evs_list(args) -> int:
+    if args.demo:
+        emit(DEMO_EVS[:args.limit], args.json, [("NAME", "name"), ("SIZE", "size"), ("TYPE", "type"), ("STATUS", "status")])
+        return 0
     try:
         rows = evs_list(args.limit)
     except RuntimeError as e:
-        return fail(str(e), "unset HUAWEICLOUD_SDK_AK / HUAWEICLOUD_SDK_SK 可回退到内置样例")
+        return fail(str(e), "未配凭证时可用 --demo 查看样例数据")
     emit(rows, args.json, [("NAME", "name"), ("SIZE", "size"), ("TYPE", "type"), ("STATUS", "status")])
     return 0
 
 
 def cmd_obs_ls(args) -> int:
-    if not args.path.startswith("obs://"):
-        return fail("路径需形如 obs://bucket/prefix", "示例：hwc obs ls obs://my-bucket/reports/")
-    return fail("OBS 需 OBS AK/SK 与独立签名", "见 skill-obs-uploader 或使用 obsutil")
+    if args.demo:
+        emit(DEMO_OBS[:args.limit], args.json, [("KEY", "key"), ("SIZE", "size")])
+        return 0
+    try:
+        rows = obs_ls(args.path, args.limit)
+    except RuntimeError as e:
+        return fail(str(e), "OBS 走 V2 签名，需 OBS_AK/OBS_SK")
+    except ValueError as e:
+        return fail(str(e), "示例：hwc obs ls obs://my-bucket/reports/")
+    emit(rows, args.json, [("KEY", "key"), ("SIZE", "size")])
+    return 0
 
 
 # ---------------------------------------------------------------- 参数
@@ -159,11 +271,14 @@ def build_parser() -> argparse.ArgumentParser:
                         help="以 JSON 输出（便于程序处理）")
     common.add_argument("--region", default=argparse.SUPPRESS,
                         help="区域，默认 cn-north-4")
+    common.add_argument("--demo", action="store_true", default=argparse.SUPPRESS,
+                        help="用内置样例数据（不发真实请求）")
 
     p = argparse.ArgumentParser(prog="hwc", description="华为云服务命令行工具")
     p.add_argument("--version", action="version", version=f"hwc {VERSION}")
     p.add_argument("--json", action="store_true", help="以 JSON 输出（便于程序处理）")
     p.add_argument("--region", default=DEFAULT_REGION, help="区域，默认 cn-north-4")
+    p.add_argument("--demo", action="store_true", help="用内置样例数据（不发真实请求）")
     sub = p.add_subparsers(dest="group", required=True)
 
     ecs = sub.add_parser("ecs", parents=[common], help="弹性云服务器")
@@ -185,6 +300,7 @@ def build_parser() -> argparse.ArgumentParser:
     obs_sub = obs.add_subparsers(dest="action", required=True)
     ol = obs_sub.add_parser("ls", parents=[common], help="列出对象")
     ol.add_argument("path")
+    ol.add_argument("--limit", type=int, default=100)
     ol.set_defaults(func=cmd_obs_ls)
 
     r = sub.add_parser("region", parents=[common], help="显示区域与凭证状态")
@@ -199,6 +315,8 @@ def main(argv: list[str] | None = None) -> int:
         args.json = False
     if not hasattr(args, "region"):
         args.region = DEFAULT_REGION
+    if not hasattr(args, "demo"):
+        args.demo = False
     try:
         return args.func(args)
     except KeyboardInterrupt:
