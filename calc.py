@@ -1,4 +1,4 @@
-"""零依赖计算工具，支持四则运算。"""
+"""零依赖计算工具，支持四则运算与数字格式化。"""
 
 
 def add(a, b):
@@ -21,3 +21,8 @@ def div(a, b):
     if b == 0:
         raise ValueError("除数不能为 0")
     return a / b
+
+
+def format_number(n, digits=2):
+    """格式化数字：保留指定小数位并加千分位。"""
+    return f"{n:,.{digits}f}"
