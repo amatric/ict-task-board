@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GitHub 热门分析 · Dashboard</title>
+<style>
+  :root{--bg:#0b1220;--card:#111a2e;--line:#1e2b45;--fg:#e6edfb;--muted:#8b9ab8;--a:#5eead4;--b:#818cf8;--c:#fbbf24}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:radial-gradient(900px 500px at 85% -10%,rgba(129,140,248,.16),transparent 60%),var(--bg);
+       color:var(--fg);font-family:-apple-system,"PingFang SC",sans-serif;line-height:1.6;padding:28px 20px 60px}
+  .wrap{max-width:1120px;margin:0 auto}
+  h1{font-size:24px;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:13px;margin-top:6px}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:22px 0}
+  @media(max-width:820px){.cards{grid-template-columns:repeat(2,1fr)}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .card .k{font-size:12px;color:var(--muted)}
+  .card .v{font-size:26px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums;
+           background:linear-gradient(120deg,var(--a),var(--b));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+  @media(max-width:820px){.grid2{grid-template-columns:1fr}}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .box h2{font-size:15px;margin-bottom:14px;font-weight:600}
+  .row{display:grid;grid-template-columns:120px 1fr 64px;align-items:center;gap:10px;margin-bottom:9px;font-size:13px}
+  .bar{height:9px;border-radius:999px;background:#1a2540;overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--a),var(--b))}
+  .num{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:500;font-size:12px}
+  td.n{text-align:right;font-variant-numeric:tabular-nums}
+  a{color:var(--a);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .topics{display:flex;flex-wrap:wrap;gap:8px}
+  .tag{font-size:12px;border:1px solid var(--line);background:#0f1830;border-radius:999px;padding:3px 10px;color:var(--muted)}
+  .foot{margin-top:18px;font-size:12px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>GitHub 热门项目分析看板</h1>
+  <div class="sub" id="sub">正在加载 output/latest.json …</div>
+
+  <div class="cards">
+    <div class="card"><div class="k">样本仓库</div><div class="v" id="kTotal">-</div></div>
+    <div class="card"><div class="k">星标合计</div><div class="v" id="kStars">-</div></div>
+    <div class="card"><div class="k">统计窗口</div><div class="v" id="kWindow">-</div></div>
+    <div class="card"><div class="k">语言种类</div><div class="v" id="kLangs">-</div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="box">
+      <h2>语言分布（仓库数）</h2>
+      <div id="langChart"></div>
+    </div>
+    <div class="box">
+      <h2>星标总量 TOP 语言</h2>
+      <div id="starChart"></div>
+    </div>
+  </div>
+
+  <div class="box" style="margin-bottom:14px">
+    <h2>高频主题标签</h2>
+    <div class="topics" id="topics"></div>
+  </div>
+
+  <div class="box">
+    <h2>热门仓库 TOP 10</h2>
+    <table>
+      <thead><tr><th>#</th><th>仓库</th><th>语言</th><th class="n">Stars</th><th>说明</th></tr></thead>
+      <tbody id="repoBody"></tbody>
+    </table>
+  </div>
+
+  <div class="foot">
+    <span>数据源：<code>output/latest.json</code>（由 <code>fetch_trending.py</code> 定时生成）</span>
+    <span id="genAt"></span>
+  </div>
+</div>
+
+<script>
+  const fmt = n => (n == null ? '-' : Number(n).toLocaleString('zh-CN'));
+
+  function bars(container, pairs, maxv) {
+    container.innerHTML = pairs.map(([k, v]) => {
+      const pct = maxv ? Math.max(2, Math.round(v / maxv * 100)) : 2;
+      return `<div class="row"><span>${k}</span><span class="bar"><i style="width:${pct}%"></i></span><span class="num">${fmt(v)}</span></div>`;
+    }).join('') || '<div class="num">暂无数据</div>';
+  }
+
+  function render(d) {
+    document.getElementById('kTotal').textContent = fmt(d.total);
+    document.getElementById('kStars').textContent = fmt(d.total_stars);
+    document.getElementById('kWindow').textContent = (d.window_days || '-') + ' 天';
+    document.getElementById('kLangs').textContent = fmt((d.languages || []).length);
+    document.getElementById('sub').textContent =
+      `统计窗口：最近 ${d.window_days} 天创建的仓库 · 样本 ${d.total} 个`;
+    document.getElementById('genAt').textContent = '生成于 ' + (d.generated_at || '-');
+
+    const langs = d.languages || [];
+    bars(document.getElementById('langChart'), langs, langs.length ? langs[0][1] : 1);
+
+    const sbl = (d.stars_by_language || []).slice(0, 8);
+    bars(document.getElementById('starChart'), sbl, sbl.length ? sbl[0][1] : 1);
+
+    document.getElementById('topics').innerHTML =
+      (d.top_topics || []).map(([t, c]) => `<span class="tag">#${t} ×${c}</span>`).join('') ||
+      '<span class="tag">暂无</span>';
+
+    document.getElementById('repoBody').innerHTML = (d.top_repos || []).slice(0, 10).map((r, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td><a href="${r.url}" target="_blank" rel="noopener">${r.name}</a></td>
+        <td>${r.language || '-'}</td>
+        <td class="n">${fmt(r.stars)}</td>
+        <td>${(r.description || '').slice(0, 60)}</td>
+      </tr>`).join('');
+  }
+
+  fetch('output/latest.json')
+    .then(r => r.json())
+    .then(render)
+    .catch(() => {
+      document.getElementById('sub').textContent =
+        '未能读取 output/latest.json —— 请先运行 python3 fetch_trending.py 生成数据，并通过本地静态服务打开本页面';
+    });
+</script>
+</body>
+</html>

@@ -1,10 +1,25 @@
-# GitHub 热门项目定时抓取与分析
+# GitHub 热门项目定时抓取与分析（Report + Dashboard）
 
 华为 ICT 大赛云赛道 **赛题6（Scheduler-定时任务抓取与分析 GitHub 热门）** 的参评作品。
 
 一个**只依赖 Python 标准库**的定时任务：按 cron 周期抓取 GitHub 近期热门仓库，做语言分布 / 星标总量 / 主题标签的统计分析，产出 Markdown 报表与 JSON 数据。
 
-## 为什么是"定时任务"而不是"跑一次脚本"
+## 产物一：看板 Dashboard
+
+```bash
+python3 -m http.server 8000
+# 打开 http://localhost:8000/dashboard.html
+```
+
+`dashboard.html` 读取 `output/latest.json`，渲染四张指标卡、语言分布条形图、星标总量 TOP 语言、高频主题标签、热门仓库 TOP 10 表格。纯 HTML + CSS + 原生 JS，无图表库依赖。
+
+**Report 与 Dashboard 的关系**：`fetch_trending.py` 一次运行同时产出
+- `output/report-<时间戳>.md` / `.json` —— **报表**，适合归档、diff、发到群里
+- `output/latest.json` —— **看板数据源**，`dashboard.html` 实时读取渲染
+
+两者同一份数据，两个消费形态：report 面向记录与传播，dashboard 面向交互查看。
+
+## 产物二：为什么是"定时任务"而不是"跑一次脚本"
 
 ```bash
 crontab crontab.example     # 每 6 小时自动抓一次
@@ -70,7 +85,8 @@ output/
 
 ```
 .
-├── fetch_trending.py     # 抓取 + 分析 + 渲染
+├── fetch_trending.py     # 抓取 + 分析 + 渲染报表
+├── dashboard.html        # 可视化看板（读 latest.json）
 ├── run_cron.sh           # cron 包装（日志 + 重试）
 ├── crontab.example       # 定时配置示例
 ├── output/               # 报表产出
