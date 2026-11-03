@@ -1,4 +1,4 @@
-"""零依赖计算工具，配合 Git 版本管理实践使用。"""
+"""零依赖计算工具，支持四则运算与数字格式化。"""
 
 
 def add(a, b):
@@ -9,3 +9,8 @@ def add(a, b):
 def sub(a, b):
     """减法。"""
     return a - b
+
+
+def format_number(n, digits=2):
+    """格式化数字：保留指定小数位并加千分位。"""
+    return f"{n:,.{digits}f}"
