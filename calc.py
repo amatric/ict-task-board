@@ -25,4 +25,4 @@ def div(a, b):
 
 def format_number(n, digits=2):
     """格式化数字：保留指定小数位并加千分位。"""
-    return f"{n:.{digits}f}"
+    return f"{n:,.{digits}f}"
