@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>2D 沙盒世界 · TerraSandbox</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0b1220;color:#e5e7eb;font-family:-apple-system,"PingFang SC",sans-serif;overflow:hidden}
+  #wrap{position:relative;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center}
+  canvas{display:block;background:#87ceeb;image-rendering:pixelated;cursor:crosshair}
+  .hud{position:absolute;top:12px;left:12px;background:rgba(11,18,32,.78);border:1px solid #1f2a44;
+       border-radius:10px;padding:10px 14px;font-size:13px;line-height:1.7;backdrop-filter:blur(6px)}
+  .hud b{color:#7dd3fc}
+  .bar{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:8px;
+       background:rgba(11,18,32,.78);border:1px solid #1f2a44;border-radius:12px;padding:8px;backdrop-filter:blur(6px)}
+  .slot{width:52px;height:52px;border-radius:9px;border:2px solid #1f2a44;background:#111a2e;
+        display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;position:relative}
+  .slot.on{border-color:#7dd3fc;box-shadow:0 0 0 2px rgba(125,211,252,.25)}
+  .slot span{position:absolute;right:3px;bottom:1px;font-size:10px;color:#94a3b8}
+  .tip{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);font-size:12px;color:#94a3b8}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv"></canvas>
+  <div class="hud">
+    <div><b>WASD / ←→</b> 移动 &nbsp; <b>空格</b> 跳跃</div>
+    <div><b>左键</b> 挖方块 &nbsp; <b>右键</b> 放置</div>
+    <div>坐标 <b id="pos">0,0</b> &nbsp; 已挖 <b id="mined">0</b></div>
+  </div>
+  <div class="bar" id="bar"></div>
+  <div class="tip">1/2/3/4 切换方块 · 滚轮也可切换</div>
+</div>
+<script>
+(function () {
+  const TILE = 28, W = 64, H = 36;
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  cv.width = W * TILE; cv.height = H * TILE;
+
+  const AIR = 0, DIRT = 1, GRASS = 2, STONE = 3, WOOD = 4, LEAF = 5, SAND = 6, ORE = 7;
+  const TYPES = {
+    [DIRT]:  { name: '泥土', color: '#8b5a2b', icon: '🟫' },
+    [STONE]: { name: '石块', color: '#6b7280', icon: '⬜' },
+    [WOOD]:  { name: '木头', color: '#a16207', icon: '🪵' },
+    [LEAF]:  { name: '树叶', color: '#22c55e', icon: '🍃' },
+    [SAND]:  { name: '沙子', color: '#eab308', icon: '🟨' },
+    [GRASS]: { name: '草皮', color: '#4ade80', icon: '🌱' },
+    [ORE]:   { name: '矿石', color: '#f59e0b', icon: '💎' }
+  };
+  const PLACEABLE = [DIRT, STONE, WOOD, LEAF, SAND];
+
+  // 生成地形
+  const map = Array.from({ length: H }, () => Array(W).fill(AIR));
+  function rand(seed) { let s = seed; return () => (s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff; }
+  const rnd = rand(20261103);
+  const surface = [];
+  let hgt = Math.floor(H * 0.45);
+  for (let x = 0; x < W; x++) {
+    hgt += Math.round((rnd() - 0.5) * 1.6);
+    hgt = Math.max(8, Math.min(H - 12, hgt));
+    surface[x] = hgt;
+    for (let y = hgt; y < H; y++) {
+      if (y === hgt) map[y][x] = GRASS;
+      else if (y < hgt + 4) map[y][x] = DIRT;
+      else map[y][x] = STONE;
+      if (y > hgt + 5 && rnd() < 0.045) map[y][x] = ORE;
+    }
+  }
+  // 几棵树
+  for (let i = 0; i < 7; i++) {
+    const tx = 4 + Math.floor(rnd() * (W - 8));
+    const ty = surface[tx] - 1;
+    const th = 3 + Math.floor(rnd() * 3);
+    for (let k = 0; k < th; k++) if (ty - k >= 0) map[ty - k][tx] = WOOD;
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dy = -th - 2; dy <= -th; dy++) {
+        const x = tx + dx, y = ty + dy;
+        if (x >= 0 && x < W && y >= 0 && y < H && map[y][x] === AIR) map[y][x] = LEAF;
+      }
+    }
+  }
+  // 一条沙地
+  for (let x = Math.floor(W * 0.6); x < Math.floor(W * 0.6) + 6; x++) {
+    for (let y = surface[x]; y < surface[x] + 2; y++) map[y][x] = SAND;
+  }
+
+  // 玩家
+  const player = { x: W * TILE / 2, y: (surface[Math.floor(W / 2)] - 3) * TILE, vx: 0, vy: 0, w: 18, h: 30, onGround: false };
+  const keys = {};
+  let current = DIRT;
+  let minedCount = 0;
+  let camera = { x: 0, y: 0 };
+
+  // 背包
+  const inv = {};
+  PLACEABLE.forEach(t => inv[t] = 0);
+  inv[DIRT] = 20; inv[WOOD] = 10;
+
+  // 方块栏
+  const bar = document.getElementById('bar');
+  PLACEABLE.forEach((t, i) => {
+    const d = document.createElement('div');
+    d.className = 'slot' + (t === current ? ' on' : '');
+    d.dataset.type = t;
+    d.innerHTML = TYPES[t].icon + '<span>' + (i + 1) + '</span>';
+    d.title = TYPES[t].name;
+    d.onclick = () => select(t);
+    bar.appendChild(d);
+  });
+  function select(t) {
+    current = t;
+    [...bar.children].forEach(c => c.classList.toggle('on', Number(c.dataset.type) === t));
+  }
+
+  window.addEventListener('keydown', e => {
+    keys[e.key.toLowerCase()] = true;
+    if (e.key === ' ') e.preventDefault();
+    if (e.key >= '1' && e.key <= '4') select(PLACEABLE[Number(e.key) - 1]);
+    if (e.key === '5') select(PLACEABLE[4]);
+  });
+  window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+  cv.addEventListener('wheel', e => {
+    e.preventDefault();
+    const i = PLACEABLE.indexOf(current);
+    select(PLACEABLE[(i + (e.deltaY > 0 ? 1 : -1) + PLACEABLE.length) % PLACEABLE.length]);
+  }, { passive: false });
+
+  function solidAt(px, py) {
+    const tx = Math.floor(px / TILE), ty = Math.floor(py / TILE);
+    if (tx < 0 || tx >= W || ty < 0 || ty >= H) return true;
+    return map[ty][tx] !== AIR;
+  }
+  function collide(px, py, w, h) {
+    return solidAt(px, py) || solidAt(px + w - 1, py) || solidAt(px, py + h - 1) || solidAt(px + w - 1, py + h - 1);
+  }
+
+  function update(dt) {
+    const speed = 0.28 * dt, jump = -7.2;
+    if (keys['a'] || keys['arrowleft']) player.vx = -speed;
+    else if (keys['d'] || keys['arrowright']) player.vx = speed * 1.15;
+    else player.vx *= 0.6;
+
+    if ((keys[' '] || keys['w'] || keys['arrowup']) && player.onGround) {
+      player.vy = jump; player.onGround = false;
+    }
+    player.vy += 0.42 * dt * 0.6;
+
+    // 水平
+    const nx = player.x + player.vx;
+    if (!collide(nx, player.y, player.w, player.h)) player.x = nx;
+    else player.vx = 0;
+    // 垂直
+    const ny = player.y + player.vy;
+    if (!collide(player.x, ny, player.w, player.h)) { player.y = ny; player.onGround = false; }
+    else {
+      if (player.vy > 0) player.onGround = true;
+      player.vy = 0;
+    }
+    player.x = Math.max(0, Math.min(W * TILE - player.w, player.x));
+    if (player.y > H * TILE) { player.y = 0; player.vy = 0; }
+
+    // 相机跟随
+    camera.x = Math.max(0, Math.min(W * TILE - cv.width, player.x - cv.width / 2));
+    camera.y = Math.max(0, Math.min(H * TILE - cv.height, player.y - cv.height / 2));
+
+    document.getElementById('pos').textContent =
+      Math.floor(player.x / TILE) + ',' + Math.floor(player.y / TILE);
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.save();
+    ctx.translate(-camera.x, -camera.y);
+
+    const x0 = Math.floor(camera.x / TILE), x1 = Math.min(W - 1, Math.ceil((camera.x + cv.width) / TILE));
+    const y0 = Math.floor(camera.y / TILE), y1 = Math.min(H - 1, Math.ceil((camera.y + cv.height) / TILE));
+
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const t = map[y][x];
+        if (t === AIR) {
+          // 天空渐变
+          const g = ctx.createLinearGradient(0, 0, 0, cv.height);
+          g.addColorStop(0, '#7dd3fc'); g.addColorStop(1, '#bae6fd');
+          ctx.fillStyle = g;
+          ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+          continue;
+        }
+        ctx.fillStyle = TYPES[t].color;
+        ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+        // 简单纹理
+        ctx.fillStyle = 'rgba(0,0,0,.10)';
+        ctx.fillRect(x * TILE, y * TILE + TILE - 3, TILE, 3);
+        if (t === ORE) {
+          ctx.fillStyle = 'rgba(255,255,255,.55)';
+          ctx.fillRect(x * TILE + 6, y * TILE + 6, 6, 6);
+        }
+      }
+    }
+
+    // 玩家
+    ctx.fillStyle = '#f87171';
+    ctx.fillRect(player.x, player.y, player.w, player.h);
+    ctx.fillStyle = '#fde68a';
+    ctx.fillRect(player.x + 3, player.y + 3, 5, 5);
+    ctx.fillRect(player.x + 11, player.y + 3, 5, 5);
+    ctx.restore();
+  }
+
+  function tileFromEvent(e) {
+    const r = cv.getBoundingClientRect();
+    const px = (e.clientX - r.left) * (cv.width / r.width) + camera.x;
+    const py = (e.clientY - r.top) * (cv.height / r.height) + camera.y;
+    return { x: Math.floor(px / TILE), y: Math.floor(py / TILE) };
+  }
+
+  cv.addEventListener('contextmenu', e => e.preventDefault());
+
+  cv.addEventListener('mousedown', e => {
+    const { x, y } = tileFromEvent(e);
+    if (x < 0 || x >= W || y < 0 || y >= H) return;
+    const t = map[y][x];
+    const reach = 6;
+    const ptx = Math.floor((player.x + player.w / 2) / TILE);
+    const pty = Math.floor((player.y + player.h / 2) / TILE);
+    if (Math.abs(x - ptx) > reach || Math.abs(y - pty) > reach) return;
+
+    if (e.button === 0) {
+      // 挖
+      if (t !== AIR) {
+        map[y][x] = AIR;
+        minedCount++;
+        document.getElementById('mined').textContent = minedCount;
+        if (inv[t] !== undefined) inv[t]++;
+      }
+    } else if (e.button === 2) {
+      // 放
+      if (t === AIR && (inv[current] || 0) > 0) {
+        // 不能放在玩家身上
+        const bx = x * TILE, by = y * TILE;
+        const overlap = !(bx + TILE <= player.x || bx >= player.x + player.w ||
+                          by + TILE <= player.y || by >= player.y + player.h);
+        if (!overlap) { map[y][x] = current; inv[current]--; }
+      }
+    }
+  });
+
+  setInterval(() => {
+    [...bar.children].forEach(c => {
+      const t = Number(c.dataset.type);
+      c.title = TYPES[t].name + ' × ' + (inv[t] || 0);
+    });
+  }, 500);
+
+  let last = performance.now();
+  function loop(now) {
+    const dt = Math.min(2.5, (now - last) / 16.67);
+    last = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
